@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>강의 끝 알림</title>
+<style>
+  body { margin: 0; background: #f4f6f3; color: #1d2a22; font: 17px/1.7 "Malgun Gothic", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  .lead { color: #4a5a50; margin: 0 0 28px; }
+  section { background: #fff; border-radius: 16px; padding: 22px 24px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  h2 { font-size: 20px; margin: 0 0 10px; }
+  ol { margin: 0; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  kbd { background: #eef1ee; border: 1px solid #cfd6d0; border-radius: 6px; padding: 1px 7px; font: inherit; font-size: 15px; }
+  .drag { text-align: center; padding: 18px 0 6px; }
+  #mark { display: inline-block; background: #1f6f43; color: #fff; text-decoration: none; font-weight: 700; font-size: 20px;
+          padding: 14px 28px; border-radius: 999px; cursor: grab; box-shadow: 0 4px 12px rgba(31,111,67,.35); }
+  .hint { color: #6b776f; font-size: 15px; text-align: center; margin: 8px 0 0; }
+  button { font: inherit; font-weight: 700; background: #fff; color: #1f6f43; border: 2px solid #1f6f43; border-radius: 12px; padding: 10px 20px; cursor: pointer; }
+  video { width: 100%; height: 54px; margin-top: 14px; display: none; }
+  .warn { background: #fff7e6; border-left: 5px solid #f0a020; }
+  #testMsg { margin: 12px 0 0; font-weight: 700; color: #1f6f43; min-height: 1.7em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔔 강의 끝 알림</h1>
+  <p class="lead">온라인 강의를 틀어 놓고 다른 일을 하실 때, 한 차시가 끝나면 소리로 알려 드립니다. 다음 차시는 원장님이 직접 누르시면 됩니다.</p>
+
+  <section>
+    <h2>1. 처음 한 번만: 단추 달기</h2>
+    <ol>
+      <li>크롬에서 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> 를 눌러 주소창 아래에 <b>북마크 줄</b>이 보이게 합니다.</li>
+      <li>아래 초록 단추를 마우스로 <b>꾹 누른 채 끌어서</b> 북마크 줄 위에 놓습니다.</li>
+    </ol>
+    <div class="drag"><a id="mark" href="#">🔔 강의 끝 알림</a></div>
+    <p class="hint">누르는 것이 아니라 북마크 줄로 끌어다 놓는 단추입니다.</p>
+  </section>
+
+  <section>
+    <h2>2. 강의 들을 때마다</h2>
+    <ol>
+      <li>강의 사이트에 로그인하고 강의 영상을 엽니다.</li>
+      <li>강의 탭을 잡아 아래로 끌어 <b>따로 떨어진 창</b>으로 만듭니다.</li>
+      <li>강의 창에서 북마크 줄의 <b>🔔 강의 끝 알림</b>을 한 번 누릅니다. 화면 위에 초록 띠가 나오면 켜진 것입니다.</li>
+      <li>영상을 재생하고 다른 일을 하십니다.</li>
+      <li>끝나기 30초 전에 <b>띵- 소리가 한 번</b> 납니다. (곧 끝난다는 예고)</li>
+      <li>다 끝나면 <b>띵-띵-띵 소리가 계속</b> 납니다. 강의 창으로 돌아와 <b>「다음 차시」</b>를 누릅니다.</li>
+    </ol>
+  </section>
+
+  <section class="warn">
+    <h2>꼭 지켜 주세요</h2>
+    <ol>
+      <li>강의 창은 <b>최소화하지 말고</b> 다른 창 뒤에 그냥 두세요. 최소화하거나 같은 창의 다른 탭으로 넘어가면 영상이 멈출 수 있습니다.</li>
+      <li>컴퓨터 <b>소리를 켜</b> 두세요.</li>
+      <li>차시가 바뀐 뒤 <b>초록 띠가 사라졌으면</b> 🔔 단추를 다시 한 번 누르세요.</li>
+      <li>영상이 중간에 20초 넘게 멈춰 있어도 소리로 알려 드립니다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>미리 시험해 보기</h2>
+    <p style="margin:0 0 12px">아래 단추를 누르면 5초짜리 연습 영상이 재생되고, 끝나면 알림이 울립니다.</p>
+    <button id="testBtn" type="button">▶ 5초 시험하기</button>
+    <video id="testVideo" controls></video>
+    <p id="testMsg"></p>
+  </section>
+</main>
+
+<script id="code" type="text/plain">(function () {
+  if (window.__lecAlarm) { window.__lecAlarm.off(); }
+
+  var SOON = 30;            /* 끝나기 이 초 전에 예고음 한 번 */
+  var PAUSE_WAIT = 20;      /* 멈춘 채로 이 초가 지나면 알림 */
+  var RING_MINUTES = 10;    /* 알림 소리가 이어지는 최대 시간 */
+  var origTitle = document.title;
+  var ctx = null, master = null;
+  var ringing = null, endedSeen = false, pausedAt = 0, pauseRung = false;
+  var watched = null, pollId = 0, blinkId = 0, note = null, soonShown = false;
+
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  if (window.Notification && Notification.permission === 'default') {
+    try { Notification.requestPermission(); } catch (e) {}
+  }
+
+  /* 화면 위쪽 안내 띠 */
+  var bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147483647;' +
+    'font:600 15px/1.4 "Malgun Gothic",sans-serif;padding:10px 18px;border-radius:14px;' +
+    'box-shadow:0 4px 16px rgba(0,0,0,.35);cursor:pointer;width:max-content;max-width:92vw;text-align:center';
+  document.body.appendChild(bar);
+  function calm() {
+    bar.style.background = '#1f6f43'; bar.style.color = '#fff'; bar.style.fontSize = '15px';
+    bar.textContent = '🔔 알림 켜짐 · 차시가 끝나면 소리로 알려드려요';
+  }
+  calm();
+
+  /* 띵-띵-띵 소리를 미리 길게 예약해 둔다(창이 가려져 있어도 울리게) */
+  function startSound() {
+    if (!ctx) return;
+    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+    master = ctx.createGain(); master.gain.value = 1; master.connect(ctx.destination);
+    var t0 = ctx.currentTime + 0.05, rounds = RING_MINUTES * 60 / 4, tones = [880, 1100, 1320];
+    for (var r = 0; r < rounds; r++) {
+      for (var i = 0; i < 3; i++) {
+        var t = t0 + r * 4 + i * 0.35;
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = tones[i];
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.45, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.32);
+      }
+    }
+  }
+  function stopSound() {
+    if (master) { try { master.disconnect(); } catch (e) {} master = null; }
+  }
+
+  function ring(kind) {
+    if (ringing === kind) return;
+    quiet();
+    ringing = kind;
+    var msg = kind === 'end'
+      ? '🔔 이번 차시가 끝났어요! 「다음 차시」를 눌러 주세요'
+      : '⏸ 강의가 멈춰 있어요! 재생 단추를 눌러 주세요';
+    bar.style.background = '#d92d20'; bar.style.color = '#fff'; bar.style.fontSize = '20px';
+    bar.textContent = msg + '  (이 글자를 누르면 소리가 꺼져요)';
+    startSound();
+    var flip = false;
+    blinkId = setInterval(function () { flip = !flip; document.title = flip ? msg : origTitle; }, 1000);
+    if (window.Notification && Notification.permission === 'granted') {
+      try {
+        note = new Notification(kind === 'end' ? '차시가 끝났어요' : '강의가 멈췄어요', {
+          body: kind === 'end' ? '강의 창에서 「다음 차시」를 눌러 주세요.' : '강의 창에서 재생 단추를 눌러 주세요.',
+          requireInteraction: true
+        });
+        note.onclick = function () { window.focus(); quiet(); };
+      } catch (e) {}
+    }
+  }
+  function quiet() {
+    stopSound();
+    if (blinkId) { clearInterval(blinkId); blinkId = 0; }
+    document.title = origTitle;
+    if (note) { try { note.close(); } catch (e) {} note = null; }
+    ringing = null;
+    calm();
+  }
+  bar.onclick = quiet;
+
+  /* 끝나기 조금 전: 띵 소리 한 번 + 주황 띠 */
+  function soon() {
+    soonShown = true;
+    bar.style.background = '#e07b00'; bar.style.color = '#fff'; bar.style.fontSize = '17px';
+    bar.textContent = '⏰ 이번 차시가 ' + SOON + '초 뒤에 끝나요';
+    if (ctx) {
+      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+      [660, 880].forEach(function (f, i) {
+        var t = ctx.currentTime + 0.05 + i * 0.4, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.37);
+      });
+    }
+    if (window.Notification && Notification.permission === 'granted') {
+      try { new Notification('곧 차시가 끝나요', { body: SOON + '초 뒤에 이번 차시가 끝납니다.' }); } catch (e) {}
+    }
+  }
+
+  function isEnded(v) {
+    return v.ended || (v.duration > 0 && v.paused && v.currentTime >= v.duration - 0.7);
+  }
+  function check() {
+    var v = document.querySelector('video');
+    if (!v) return;
+    if (v !== watched) {
+      watched = v;
+      v.addEventListener('ended', check);
+      v.addEventListener('pause', check);
+      v.addEventListener('playing', check);
+    }
+    var ended = isEnded(v);
+    if (ended) {
+      if (!endedSeen) { endedSeen = true; ring('end'); }
+      pausedAt = 0;
+      return;
+    }
+    endedSeen = false;
+    var left = v.duration > 0 ? v.duration - v.currentTime : Infinity;
+    if (soonShown && left > SOON) { soonShown = false; if (!ringing) calm(); }
+    if (!v.paused) {
+      pausedAt = 0; pauseRung = false;
+      if (ringing) quiet();
+      if (!soonShown && v.duration > SOON * 3 && left <= SOON) soon();
+      return;
+    }
+    if (ringing === 'end') quiet();
+    if (v.currentTime > 0) {
+      if (!pausedAt) pausedAt = Date.now();
+      if (!pauseRung && Date.now() - pausedAt >= PAUSE_WAIT * 1000) { pauseRung = true; ring('pause'); }
+    }
+  }
+  pollId = setInterval(check, 1000);
+  check();
+
+  window.__lecAlarm = {
+    off: function () {
+      clearInterval(pollId); quiet();
+      if (bar.parentNode) bar.parentNode.removeChild(bar);
+      if (ctx) { try { ctx.close(); } catch (e) {} }
+      window.__lecAlarm = null;
+    },
+    state: function () { return { ringing: ringing, endedSeen: endedSeen, soon: soonShown, audio: ctx ? ctx.state : 'none' }; }
+  };
+})();</script>
+<script>
+  var code = document.getElementById('code').textContent;
+  var mark = document.getElementById('mark');
+  mark.href = 'javascript:' + encodeURIComponent(code);
+  mark.addEventListener('click', function (e) {
+    e.preventDefault();
+    alert('이 단추는 누르는 것이 아니라, 북마크 줄로 끌어다 놓는 단추입니다.');
+  });
+
+  /* 5초짜리 조용한 연습 소리를 만들어 영상 칸에 넣는다 */
+  function practiceClip(seconds) {
+    var rate = 8000, n = rate * seconds, buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+    function str(o, s) { for (var i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); }
+    str(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); str(8, 'WAVEfmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+    str(36, 'data'); dv.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  document.getElementById('testBtn').addEventListener('click', function () {
+    var v = document.getElementById('testVideo');
+    v.style.display = 'block';
+    v.src = practiceClip(5);
+    (0, eval)(code);
+    v.play();
+    document.getElementById('testMsg').textContent = '재생 중… 5초 뒤에 띵-띵-띵 소리가 나면 성공입니다. 빨간 띠를 누르면 소리가 꺼집니다.';
+  });
+</script>
+</body>
+</html>
